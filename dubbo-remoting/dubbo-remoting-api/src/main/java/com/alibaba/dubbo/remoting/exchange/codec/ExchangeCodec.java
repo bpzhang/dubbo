@@ -20,6 +20,7 @@ import com.alibaba.dubbo.common.io.Bytes;
 import com.alibaba.dubbo.common.io.StreamUtils;
 import com.alibaba.dubbo.common.logger.Logger;
 import com.alibaba.dubbo.common.logger.LoggerFactory;
+import com.alibaba.dubbo.common.serialize.Cleanable;
 import com.alibaba.dubbo.common.serialize.ObjectInput;
 import com.alibaba.dubbo.common.serialize.ObjectOutput;
 import com.alibaba.dubbo.common.serialize.Serialization;
@@ -64,6 +65,7 @@ public class ExchangeCodec extends TelnetCodec {
         return MAGIC;
     }
 
+    @Override
     public void encode(Channel channel, ChannelBuffer buffer, Object msg) throws IOException {
         if (msg instanceof Request) {
             encodeRequest(channel, buffer, (Request) msg);
@@ -74,6 +76,7 @@ public class ExchangeCodec extends TelnetCodec {
         }
     }
 
+    @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int readable = buffer.readableBytes();
         byte[] header = new byte[Math.min(readable, HEADER_LENGTH)];
@@ -81,6 +84,7 @@ public class ExchangeCodec extends TelnetCodec {
         return decode(channel, buffer, readable, header);
     }
 
+    @Override
     protected Object decode(Channel channel, ChannelBuffer buffer, int readable, byte[] header) throws IOException {
         // check magic number.
         if (readable > 0 && header[0] != MAGIC_HIGH
@@ -230,6 +234,9 @@ public class ExchangeCodec extends TelnetCodec {
             encodeRequestData(channel, out, req.getData());
         }
         out.flushBuffer();
+        if (out instanceof Cleanable) {
+            ((Cleanable) out).cleanup();
+        }
         bos.flush();
         bos.close();
         int len = bos.writtenBytes();
@@ -271,6 +278,9 @@ public class ExchangeCodec extends TelnetCodec {
                 }
             } else out.writeUTF(res.getErrorMessage());
             out.flushBuffer();
+            if (out instanceof Cleanable) {
+                ((Cleanable) out).cleanup();
+            }
             bos.flush();
             bos.close();
 
